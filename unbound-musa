@@ -1,0 +1,192 @@
+Step 1 – Install and Configure Unbound DNS
+By default, the Unbound package is included in the Ubuntu default repository. You can install it using the following command:
+
+apt-get install unbound -y
+After installing Unbound DNS, you will need to configure it. By default, the Unbound main configuration file is located at /etc/unbound/unbound.conf.
+
+nano /etc/unbound/unbound.conf
+Add the following lines:
+
+server:
+port: 53
+verbosity: 0
+num-threads: 2
+outgoing-range: 512
+num-queries-per-thread: 1024
+msg-cache-size: 32m
+interface: 0.0.0.0
+rrset-cache-size: 64m
+cache-max-ttl: 86400
+infra-host-ttl: 60
+infra-lame-ttl: 120
+access-control: 127.0.0.0/8 allow
+access-control: 0.0.0.0/0 allow
+username: unbound
+directory: "/etc/unbound"
+logfile: "/var/log/unbound.log"
+use-syslog: no
+hide-version: yes
+so-rcvbuf: 4m
+so-sndbuf: 4m
+do-ip4: yes
+do-ip6: no
+do-udp: yes
+do-tcp: yes
+remote-control:
+control-enable: yes
+control-port: 953
+control-interface: 0.0.0.0
+Save and close the file.
+
+Step 2 – Configure System DNS Settings
+Next, you will need to configure your system to use the local resolver.
+Disable systemd-resolved,
+
+systemctl disable --now systemd-resolved
+Remove existing resolv.conf,
+
+rm /etc/resolv.conf
+Create new resolv.conf.
+
+echo "nameserver 127.0.0.1" | sudo tee /etc/resolv.conf
+echo "options edns0 trust-ad" | sudo tee -a /etc/resolv.conf
+Prevent changes by network managers.
+
+chattr +i /etc/resolv.conf
+Step 3: Start and Enable Unbound
+Now, start and enable the unbound service.
+
+systemctl enable unbound
+systemctl start unbound
+Now, verify the status of unbound.
+
+systemctl status unbound
+Output.
+
+● unbound.service - Unbound DNS server
+     Loaded: loaded (/usr/lib/systemd/system/unbound.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2025-05-23 07:35:05 UTC; 17min ago
+       Docs: man:unbound(8)
+   Main PID: 24982 (unbound)
+      Tasks: 1 (limit: 9440)
+     Memory: 12.1M (peak: 12.6M)
+        CPU: 131ms
+     CGroup: /system.slice/unbound.service
+             └─24982 /usr/sbin/unbound -d -p
+
+Step 4 – Test Unbound DNS
+Now, you must use the dig command and perform some DNS queries to test the Unbound DNS server.
+
+We will use ubuntu.com for testing.
+
+dig ubuntu.com @localhost
+Sample output:
+
+; <<>> DiG 9.18.30-0ubuntu0.24.04.2-Ubuntu <<>> ubuntu.com @localhost
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54289
+;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;ubuntu.com.			IN	A
+
+;; ANSWER SECTION:
+ubuntu.com.		60	IN	A	185.125.190.20
+ubuntu.com.		60	IN	A	185.125.190.29
+ubuntu.com.		60	IN	A	185.125.190.21
+
+;; Query time: 307 msec
+;; SERVER: 127.0.0.1#53(localhost) (UDP)
+;; WHEN: Fri May 23 07:53:08 UTC 2025
+;; MSG SIZE  rcvd: 87
+
+As you can see, the query time is 307 msec in the first query. Your query is now cached.
+
+Next, let’s rerun the same query:
+
+dig ubuntu.com @localhost
+Sample output:
+
+; <<>> DiG 9.18.30-0ubuntu0.24.04.2-Ubuntu <<>> ubuntu.com @localhost
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 37386
+;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;ubuntu.com.			IN	A
+
+;; ANSWER SECTION:
+ubuntu.com.		10	IN	A	185.125.190.29
+ubuntu.com.		10	IN	A	185.125.190.21
+ubuntu.com.		10	IN	A	185.125.190.20
+
+;; Query time: 0 msec
+;; SERVER: 127.0.0.1#53(localhost) (UDP)
+;; WHEN: Fri May 23 07:53:58 UTC 2025
+;; MSG SIZE  rcvd: 87
+
+As you can see, the query time is 0 msec.
+
+You can also test the Unbound DNS server from the client machine. In this case, you will need to specify your Unbound DNS server IP with the query:
+
+dig ubuntu.com @your-server-ip
+Sample output:
+
+; <<>> DiG 9.18.30-0ubuntu0.24.04.2-Ubuntu <<>> ubuntu.com @104.245.34.161
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 35235
+;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;ubuntu.com.			IN	A
+
+;; ANSWER SECTION:
+ubuntu.com.		47	IN	A	185.125.190.21
+ubuntu.com.		47	IN	A	185.125.190.29
+ubuntu.com.		47	IN	A	185.125.190.20
+
+;; Query time: 285 msec
+;; SERVER: 104.245.34.161#53(104.245.34.161) (UDP)
+;; WHEN: Fri May 23 13:36:02 IST 2025
+;; MSG SIZE  rcvd: 87
+
+Step 5 – Troubleshooting Unbound
+If you want to check the status of the Unbound DNS, run the following command:
+
+unbound-control status
+Sample output:
+
+version: 1.19.2
+verbosity: 0
+threads: 2
+modules: 3 [ subnetcache validator iterator ]
+uptime: 83 seconds
+options: reuseport control(namedpipe)
+unbound (pid 27189) is running...
+
+If you want to back up a DNS Cache to a text file, run the following command:
+
+unbound-control dump_cache > cache.txt
+You can verify the cache.txt file with the following command:
+
+cat cache.txt
+Sample output:
+
+START_RRSET_CACHE
+END_RRSET_CACHE
+START_MSG_CACHE
+END_MSG_CACHE
+EOF
+In some cases, your DNS server cannot reply to your query. In this case, you can flush the DNS cache using the following command:
+
+unbound-control flush ubuntu.com
+Conclusion
