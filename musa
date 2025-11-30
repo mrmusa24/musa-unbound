@@ -1,0 +1,117 @@
+# Unbound configuration file for Debian.
+#
+# See the unbound.conf(5) man page.
+#
+# See /usr/share/doc/unbound/examples/unbound.conf for a commented
+# reference config file.
+
+include: "/etc/unbound/unbound.conf.d/*.conf"
+
+   server:
+    username: "unbound"
+    directory: "/etc/unbound"
+    logfile: "/var/log/unbound.log"
+    use-syslog: no
+
+    # Primary DNS port
+    port: 53
+
+    # Additional listening port (443)
+    interface: 0.0.0.0@53
+    interface: 0.0.0.0@443
+
+    verbosity: 1
+    # Performance tuning
+    num-threads: 4
+    outgoing-range: 1024
+    num-queries-per-thread: 2048
+   msg-cache-size: 256m
+   rrset-cache-size: 512m
+    cache-max-ttl: 86400
+    infra-host-ttl: 60
+    infra-lame-ttl: 120
+    
+    # Network interfaces
+    interface: 103.106.243.116
+# Unbound access-control
+
+access-control: 127.0.0.0/8 allow
+access-control: 10.0.0.0/8 allow
+access-control: 192.0.0.0/8 allow
+access-control: 192.168.0.0/11 allow
+access-control: 103.106.240.0/22 allow
+access-control: 103.106.240.0/24 allow
+access-control: 103.106.241.0/24 allow
+access-control: 103.179.156.0/23 allow
+access-control: 103.106.242.0/24 allow
+access-control: 103.106.243.0/24 allow
+
+access-control: 103.151.30.0/23 allow
+access-control: 103.151.30.0/24 allow
+access-control: 103.151.31.0/24 allow
+
+access-control: 103.174.225.0/24 allow
+
+
+access-control: 103.170.184.0/23 allow
+access-control: 10.0.0.0/8 allow
+access-control: 10.10.0.0/16 allow
+access-control: 10.96.96.0/24 allow
+access-control: 172.10.0.0/16 allow
+access-control: 172.16.11.0/24 allow
+access-control: 192.168.0.0/16 allow
+
+access-control: 163.61.17.0/24 allow
+access-control: 0.0.0.0/0 refuse
+    # Protocol options
+    do-ip4: yes
+    do-ip6: no
+    do-udp: yes
+    do-tcp: yes
+    so-rcvbuf: 8m
+    so-sndbuf: 8m
+    
+    # Security
+    hide-version: yes
+    hide-identity: yes
+    harden-glue: yes
+    harden-dnssec-stripped: yes
+    
+    # Local zone for asiannetwork
+    local-zone: "asiannetwork." static
+    local-data: "ns.asiannetwork. IN A 103.106.243.116"
+    local-data-ptr: "103.106.243.116 ns.asiannetwork."
+
+remote-control:
+    control-enable: yes
+    control-port: 953
+    control-interface: 127.0.0.1
+
+# DNS-over-TLS forwarding
+forward-zone:
+    name: "."
+    forward-ssl-upstream: yes
+    # Google
+    forward-addr: 8.8.4.4@853 #dns.google
+    forward-addr: 8.8.8.8@853 #dns.google
+    forward-addr: 8.8.4.4@443 #dns.google
+    forward-addr: 8.8.8.8@443 #dns.google
+    # cloudflare
+    #forward-addr:1.0.0.1@853 #cloudflare-dns.com
+    forward-addr: 1.1.1.1@853 #cloudflare-dns.com
+    forward-addr: 9.9.9.9@853 
+
+ # dns.adguard-dns.com
+    #forward-addr:94.140.14.14@853 
+    forward-addr: 94.140.14.15@853 
+    forward-addr: 94.140.14.140@853 
+    forward-addr: 94.140.14.141@853 
+ 
+    # cloudflare
+    #forward-addr:1.0.0.1@443 #cloudflare-dns.com
+    forward-addr: 1.1.1.1@443 #cloudflare-dns.com
+    forward-addr: 9.9.9.9@443 
+
+
+
+
